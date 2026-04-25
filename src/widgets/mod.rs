@@ -1,1 +1,3 @@
-// stub - filled in by later tasks
+pub mod sparkline;
+
+pub use sparkline::Sparkline;
