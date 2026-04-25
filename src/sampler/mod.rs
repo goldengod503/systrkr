@@ -30,3 +30,50 @@ pub struct GpuSample {
     pub memory_total_bytes: Option<u64>,
     pub temperature_c: Option<f32>,
 }
+
+use cpu::CpuSampler;
+use gpu::GpuBackend;
+
+pub struct Sampler {
+    cpu: CpuSampler,
+    gpu: Box<dyn GpuBackend>,
+}
+
+impl Sampler {
+    pub fn new() -> Self {
+        Self {
+            cpu: CpuSampler::new(),
+            gpu: gpu::probe(),
+        }
+    }
+
+    pub fn gpu_name(&self) -> &str {
+        self.gpu.name()
+    }
+
+    pub fn tick(&mut self) -> Sample {
+        Sample {
+            cpu: self.cpu.tick(),
+            gpu: self.gpu.sample(),
+        }
+    }
+}
+
+impl Default for Sampler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[cfg(test)]
+mod aggregator_tests {
+    use super::*;
+
+    #[test]
+    fn two_consecutive_ticks_dont_panic() {
+        let mut s = Sampler::new();
+
+        let _ = s.tick();
+        let _ = s.tick();
+    }
+}
