@@ -1,0 +1,27 @@
+[package]
+name = "systrkr"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "Lightweight native COSMIC system stats applet"
+repository = "https://github.com/goldengod503/systrkr"
+
+[features]
+default = ["nvidia"]
+nvidia = ["dep:nvml-wrapper"]
+
+[dependencies]
+sysinfo = "0.32"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+nvml-wrapper = { version = "0.10", optional = true }
+
+[dependencies.libcosmic]
+git = "https://github.com/pop-os/libcosmic.git"
+default-features = false
+features = ["applet", "tokio", "wayland", "single-instance"]
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "symbols"
