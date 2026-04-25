@@ -16,7 +16,7 @@ pub fn view(app: &App) -> Element<'_, Message> {
             divider::horizontal::default().into(),
             gpu_section(&gpu_name, gpu).into(),
             divider::horizontal::default().into(),
-            footer().into(),
+            footer(app.system_monitor_bin).into(),
         ])
         .spacing(8)
         .padding(12),
@@ -83,11 +83,16 @@ fn gpu_section<'a>(name: &str, s: &GpuSample) -> Element<'a, Message> {
     .into()
 }
 
-fn footer<'a>() -> Element<'a, Message> {
-    button::standard("Open System Monitor")
-        .on_press(Message::OpenSystemMonitor)
-        .width(Length::Fill)
-        .into()
+fn footer<'a>(bin: Option<&'static str>) -> Element<'a, Message> {
+    let label = match bin {
+        Some(_) => "Open System Monitor",
+        None => "System monitor not found",
+    };
+    let mut btn = button::standard(label).width(Length::Fill);
+    if bin.is_some() {
+        btn = btn.on_press(Message::OpenSystemMonitor);
+    }
+    btn.into()
 }
 
 fn kv_row<'a>(key: &'static str, value: String) -> Element<'a, Message> {

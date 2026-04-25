@@ -27,6 +27,7 @@ pub struct App {
     pub(crate) cpu_cache: Cache,
     pub(crate) gpu_cache: Cache,
     pub(crate) popup_id: Option<cosmic::iced::window::Id>,
+    pub(crate) system_monitor_bin: Option<&'static str>,
 }
 
 impl cosmic::Application for App {
@@ -54,6 +55,7 @@ impl cosmic::Application for App {
             cpu_cache: Cache::default(),
             gpu_cache: Cache::default(),
             popup_id: None,
+            system_monitor_bin: detect_system_monitor(),
         };
         (app, Task::none())
     }
@@ -107,7 +109,7 @@ impl cosmic::Application for App {
                 Task::none()
             }
             Message::OpenSystemMonitor => {
-                spawn_system_monitor();
+                spawn_system_monitor(self.system_monitor_bin);
                 Task::none()
             }
         }
@@ -171,18 +173,41 @@ impl App {
     }
 }
 
-fn spawn_system_monitor() {
-    use std::process::Command;
-    for bin in ["cosmic-monitor", "gnome-system-monitor"] {
-        if Command::new(bin)
-            .stdin(std::process::Stdio::null())
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .spawn()
-            .is_ok()
-        {
-            return;
+fn detect_system_monitor() -> Option<&'static str> {
+    let candidates = ["cosmic-monitor", "gnome-system-monitor"];
+    for bin in candidates {
+        if which(bin) {
+            return Some(bin);
         }
     }
-    tracing::warn!("no system monitor binary found on PATH");
+    None
+}
+
+fn which(bin: &str) -> bool {
+    let Ok(path) = std::env::var("PATH") else {
+        return false;
+    };
+    for dir in path.split(':') {
+        let p = std::path::PathBuf::from(dir).join(bin);
+        if p.is_file() {
+            return true;
+        }
+    }
+    false
+}
+
+fn spawn_system_monitor(bin: Option<&'static str>) {
+    use std::process::Command;
+    let Some(bin) = bin else {
+        tracing::warn!("OpenSystemMonitor pressed but no system monitor binary detected");
+        return;
+    };
+    if let Err(e) = Command::new(bin)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+    {
+        tracing::warn!(error = %e, bin, "failed to spawn system monitor");
+    }
 }
