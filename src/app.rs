@@ -89,13 +89,42 @@ impl cosmic::Application for App {
     }
 
     fn view(&self) -> Element<'_, Message> {
-        // Replaced by Task 12.
-        cosmic::widget::text(format!(
-            "CPU {:.0}%  GPU {:.0}%",
-            self.latest.cpu.utilization_pct.unwrap_or(0.0),
-            self.latest.gpu.utilization_pct.unwrap_or(0.0)
-        ))
-        .into()
+        use cosmic::iced::{Alignment, Length};
+        use cosmic::widget::{column as col, container, mouse_area, row, text};
+        use cosmic::widget::canvas::Canvas;
+
+        use crate::widgets::Sparkline;
+
+        let cpu_samples: Vec<f32> = self.cpu_history.iter().collect();
+        let gpu_samples: Vec<f32> = self.gpu_history.iter().collect();
+
+        let cpu_column = col::with_children(vec![
+            text("CPU").size(8).into(),
+            Canvas::new(Sparkline::new(cpu_samples, HISTORY_LEN, &self.cpu_cache))
+                .width(Length::Fixed(40.0))
+                .height(Length::Fixed(20.0))
+                .into(),
+        ])
+        .align_x(Alignment::Center)
+        .spacing(2);
+
+        let gpu_column = col::with_children(vec![
+            text("GPU").size(8).into(),
+            Canvas::new(Sparkline::new(gpu_samples, HISTORY_LEN, &self.gpu_cache))
+                .width(Length::Fixed(40.0))
+                .height(Length::Fixed(20.0))
+                .into(),
+        ])
+        .align_x(Alignment::Center)
+        .spacing(2);
+
+        let content = row::with_children(vec![cpu_column.into(), gpu_column.into()])
+            .spacing(6)
+            .align_y(Alignment::Center);
+
+        mouse_area(container(content).padding(4))
+            .on_press(Message::TogglePopup)
+            .into()
     }
 
     fn subscription(&self) -> Subscription<Message> {
