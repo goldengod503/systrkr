@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=systrkr
+Comment=Lightweight CPU + GPU panel applet
+Exec=systrkr
+Icon=com.system76.SysTrkr
+Terminal=false
+Categories=System;Monitor;
+NoDisplay=true
+X-CosmicApplet=true
