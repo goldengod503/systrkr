@@ -3,6 +3,7 @@
 pub mod none;
 pub mod amd;
 pub mod intel;
+pub mod procs;
 
 #[cfg(feature = "nvidia")]
 pub mod nvml;
