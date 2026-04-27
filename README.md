@@ -6,12 +6,14 @@ Lightweight native [COSMIC](https://system76.com/cosmic) panel applet that shows
 
 ## Features
 
-- Two live sparklines in the panel (CPU + GPU) at 2 Hz, 30-second history
-- Auto-detects NVIDIA (NVML), AMD (sysfs), and Intel (sysfs) GPUs
-- Popup with CPU/GPU model, temperatures, RAM/swap usage, load average, and VRAM
-- "Open System Monitor" button that launches `cosmic-monitor` or falls back to `gnome-system-monitor`
+- Live CPU and GPU sparklines in the panel — at 0.5 s, 1 s, 2 s, or 5 s tick (configurable)
+- Threshold-aware coloring: accent → amber → red as load crosses your warning and critical thresholds
+- Per-process drilldown popup: top 5 by CPU%, top 5 by GPU memory or busy% (NVIDIA NVML or DRM fdinfo)
+- Auto-detects NVIDIA, AMD, and Intel GPUs; multi-GPU picker for workstations
+- Optional RAM, Network, and Disk sparklines (toggle in Settings)
+- Adapts to vertical panels (left/right edge): stacks sparklines vertically
 - Native COSMIC theming — follows your accent color and light/dark mode
-- Zero configuration
+- Live-reload settings via `cosmic-config`
 
 ## Requirements
 
