@@ -199,8 +199,8 @@ impl cosmic::Application for App {
         use crate::widgets::Sparkline;
 
         let theme = cosmic::theme::active();
-        let cpu_color = threshold_color(&theme, self.latest.cpu.utilization_pct);
-        let gpu_color = threshold_color(&theme, self.latest.gpu.utilization_pct);
+        let cpu_color = threshold_color(&theme, &self.config, self.latest.cpu.utilization_pct);
+        let gpu_color = threshold_color(&theme, &self.config, self.latest.gpu.utilization_pct);
 
         let cpu_samples: Vec<f32> = self.cpu_history.iter().collect();
         let gpu_samples: Vec<f32> = self.gpu_history.iter().collect();
@@ -327,12 +327,16 @@ fn spawn_system_monitor(bin: Option<&'static str>) {
     }
 }
 
-fn threshold_color(theme: &cosmic::Theme, value: Option<f32>) -> cosmic::iced::Color {
+fn threshold_color(
+    theme: &cosmic::Theme,
+    cfg: &SystrkrConfig,
+    value: Option<f32>,
+) -> cosmic::iced::Color {
     use cosmic::iced::Color;
     let cosmic = theme.cosmic();
     let palette = match value {
-        Some(v) if v >= 85.0 => cosmic.destructive_color(),
-        Some(v) if v >= 60.0 => cosmic.warning_color(),
+        Some(v) if v >= cfg.crit_threshold as f32 => cosmic.destructive_color(),
+        Some(v) if v >= cfg.warn_threshold as f32 => cosmic.warning_color(),
         _ => cosmic.accent_color(),
     };
     Color {

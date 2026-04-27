@@ -1,5 +1,5 @@
 use cosmic::iced::Length;
-use cosmic::widget::{column as col, dropdown, row, text, toggler};
+use cosmic::widget::{column as col, dropdown, row, slider, text, toggler};
 use cosmic::Element;
 
 use crate::app::{App, Message, Metric};
@@ -47,11 +47,20 @@ pub fn view(app: &App) -> Element<'_, Message> {
     };
     let gpu_picker = dropdown(gpu_labels, gpu_idx, Message::SetGpuIndex);
 
+    let warn_slider = slider(0.0..=100.0, cfg.warn_threshold as f32, |v| {
+        Message::SetWarnThreshold(v as u8)
+    });
+    let crit_slider = slider(0.0..=100.0, cfg.crit_threshold as f32, |v| {
+        Message::SetCritThreshold(v as u8)
+    });
+
     col::with_children(vec![
         text("Settings").size(13).into(),
         labeled("Refresh", refresh_picker.into()),
         labeled("History", history_picker.into()),
         labeled("GPU", gpu_picker.into()),
+        labeled(format!("Warn ≥ {}%", cfg.warn_threshold), warn_slider.into()),
+        labeled(format!("Crit ≥ {}%", cfg.crit_threshold), crit_slider.into()),
         metric_row("Show CPU", Metric::Cpu, cfg.show_cpu),
         metric_row("Show GPU", Metric::Gpu, cfg.show_gpu),
         metric_row("Show RAM", Metric::Ram, cfg.show_ram),
@@ -62,9 +71,9 @@ pub fn view(app: &App) -> Element<'_, Message> {
     .into()
 }
 
-fn labeled<'a>(label: &'static str, control: Element<'a, Message>) -> Element<'a, Message> {
+fn labeled<'a>(label: impl Into<String>, control: Element<'a, Message>) -> Element<'a, Message> {
     row::with_children(vec![
-        text(label).size(11).width(Length::Fixed(80.0)).into(),
+        text(label.into()).size(11).width(Length::Fixed(80.0)).into(),
         control,
     ])
     .into()
