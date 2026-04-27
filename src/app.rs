@@ -360,9 +360,17 @@ impl cosmic::Application for App {
             columns.push(disk_column.into());
         }
 
-        let content = row::with_children(columns)
-            .spacing(8)
-            .align_y(Alignment::Center);
+        let content: Element<'_, Message> = if self.core.applet.is_horizontal() {
+            row::with_children(columns)
+                .spacing(8)
+                .align_y(Alignment::Center)
+                .into()
+        } else {
+            col::with_children(columns)
+                .spacing(4)
+                .align_x(Alignment::Center)
+                .into()
+        };
 
         let button = mouse_area(container(content).padding(4))
             .on_press(Message::TogglePopup);
