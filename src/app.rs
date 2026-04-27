@@ -37,6 +37,12 @@ pub struct App {
     sampler: Sampler,
     pub(crate) cpu_history: RingBuf<f32>,
     pub(crate) gpu_history: RingBuf<f32>,
+    pub(crate) ram_history: RingBuf<f32>,
+    pub(crate) ram_cache: Cache,
+    pub(crate) net_history: RingBuf<f32>,
+    pub(crate) net_cache: Cache,
+    pub(crate) disk_history: RingBuf<f32>,
+    pub(crate) disk_cache: Cache,
     pub(crate) latest: Sample,
     pub(crate) cpu_cache: Cache,
     pub(crate) gpu_cache: Cache,
@@ -73,6 +79,12 @@ impl cosmic::Application for App {
             sampler,
             cpu_history: RingBuf::new(cap),
             gpu_history: RingBuf::new(cap),
+            ram_history: RingBuf::new(cap),
+            ram_cache: Cache::default(),
+            net_history: RingBuf::new(cap),
+            net_cache: Cache::default(),
+            disk_history: RingBuf::new(cap),
+            disk_cache: Cache::default(),
             latest: Sample::default(),
             cpu_cache: Cache::default(),
             gpu_cache: Cache::default(),
@@ -94,9 +106,23 @@ impl cosmic::Application for App {
                 if let Some(v) = sample.gpu.utilization_pct {
                     self.gpu_history.push(v);
                 }
+                if let (Some(used), Some(total)) =
+                    (sample.cpu.ram_used_bytes, sample.cpu.ram_total_bytes)
+                {
+                    if total > 0 {
+                        self.ram_history.push((used as f32 / total as f32) * 100.0);
+                    }
+                }
+                let net_combined = sample.net.rx_bps.saturating_add(sample.net.tx_bps);
+                self.net_history.push(net_combined as f32);
+                let disk_combined = sample.disk.read_bps.saturating_add(sample.disk.write_bps);
+                self.disk_history.push(disk_combined as f32);
                 self.latest = sample;
                 self.cpu_cache.clear();
                 self.gpu_cache.clear();
+                self.ram_cache.clear();
+                self.net_cache.clear();
+                self.disk_cache.clear();
                 Task::none()
             }
             Message::TogglePopup => {
@@ -141,10 +167,16 @@ impl cosmic::Application for App {
                 if cap != self.cpu_history.capacity() {
                     self.cpu_history.resize(cap);
                     self.gpu_history.resize(cap);
+                    self.ram_history.resize(cap);
+                    self.net_history.resize(cap);
+                    self.disk_history.resize(cap);
                 }
                 self.config = new_cfg;
                 self.cpu_cache.clear();
                 self.gpu_cache.clear();
+                self.ram_cache.clear();
+                self.net_cache.clear();
+                self.disk_cache.clear();
                 Task::none()
             }
             Message::ToggleSettings => {
@@ -244,7 +276,91 @@ impl cosmic::Application for App {
         .align_x(Alignment::Center)
         .spacing(2);
 
-        let content = row::with_children(vec![cpu_column.into(), gpu_column.into()])
+        let mut columns: Vec<Element<'_, Message>> = Vec::new();
+
+        if self.config.show_cpu {
+            columns.push(cpu_column.into());
+        }
+        if self.config.show_gpu {
+            columns.push(gpu_column.into());
+        }
+
+        if self.config.show_ram {
+            let ram_pct = match (
+                self.latest.cpu.ram_used_bytes,
+                self.latest.cpu.ram_total_bytes,
+            ) {
+                (Some(used), Some(total)) if total > 0 => {
+                    Some((used as f32 / total as f32) * 100.0)
+                }
+                _ => None,
+            };
+            let ram_color = threshold_color(&theme, &self.config, ram_pct);
+            let ram_label = ram_pct
+                .map(|v| format!("RAM {v:.0}%"))
+                .unwrap_or_else(|| "RAM —".into());
+            let ram_samples: Vec<f32> = self.ram_history.iter().collect();
+            let ram_column = col::with_children(vec![
+                text(ram_label).size(10).into(),
+                Canvas::new(
+                    Sparkline::new(ram_samples, cap, &self.ram_cache).tint(ram_color),
+                )
+                .width(Length::Fixed(48.0))
+                .height(Length::Fixed(20.0))
+                .into(),
+            ])
+            .align_x(Alignment::Center)
+            .spacing(2);
+            columns.push(ram_column.into());
+        }
+
+        if self.config.show_net {
+            let net_total = self.latest.net.rx_bps.saturating_add(self.latest.net.tx_bps);
+            let net_color = threshold_color(&theme, &self.config, None);
+            let net_label = format!("NET {}", fmt_bps(net_total));
+            let net_samples: Vec<f32> = self.net_history.iter().collect();
+            let net_column = col::with_children(vec![
+                text(net_label).size(10).into(),
+                Canvas::new(
+                    Sparkline::new(net_samples, cap, &self.net_cache)
+                        .tint(net_color)
+                        .scale(crate::widgets::sparkline::Scale::AutoMax),
+                )
+                .width(Length::Fixed(48.0))
+                .height(Length::Fixed(20.0))
+                .into(),
+            ])
+            .align_x(Alignment::Center)
+            .spacing(2);
+            columns.push(net_column.into());
+        }
+
+        if self.config.show_disk {
+            let disk_total = self
+                .latest
+                .disk
+                .read_bps
+                .saturating_add(self.latest.disk.write_bps);
+            let disk_color = threshold_color(&theme, &self.config, None);
+            let disk_label = format!("DSK {}", fmt_bps(disk_total));
+            let disk_samples: Vec<f32> = self.disk_history.iter().collect();
+            let disk_column = col::with_children(vec![
+                text(disk_label).size(10).into(),
+                Canvas::new(
+                    Sparkline::new(disk_samples, cap, &self.disk_cache)
+                        .tint(disk_color)
+                        .scale(crate::widgets::sparkline::Scale::AutoMax),
+                )
+                .width(Length::Fixed(48.0))
+                .height(Length::Fixed(20.0))
+                .into(),
+            ])
+            .align_x(Alignment::Center)
+            .spacing(2);
+            columns.push(disk_column.into());
+        }
+
+        let content = row::with_children(columns)
             .spacing(8)
             .align_y(Alignment::Center);
 
@@ -324,6 +440,19 @@ fn spawn_system_monitor(bin: Option<&'static str>) {
         .spawn()
     {
         tracing::warn!(error = %e, bin, "failed to spawn system monitor");
+    }
+}
+
+fn fmt_bps(bps: u64) -> String {
+    const M: f64 = 1_000_000.0;
+    const K: f64 = 1_000.0;
+    let f = bps as f64;
+    if f >= M {
+        format!("{:.1}M", f / M)
+    } else if f >= K {
+        format!("{:.0}K", f / K)
+    } else {
+        format!("{}", bps)
     }
 }
 
