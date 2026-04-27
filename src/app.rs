@@ -7,6 +7,15 @@ use crate::config::{SystrkrConfig, CONFIG_ID, CONFIG_VERSION};
 use crate::history::RingBuf;
 use crate::sampler::{Sample, Sampler};
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Metric {
+    Cpu,
+    Gpu,
+    Ram,
+    Net,
+    Disk,
+}
+
 #[derive(Clone, Debug)]
 pub enum Message {
     Tick,
@@ -14,6 +23,13 @@ pub enum Message {
     PopupClosed,
     OpenSystemMonitor,
     ConfigUpdated(SystrkrConfig),
+    ToggleSettings,
+    SetRefreshMs(u64),
+    SetHistorySeconds(u64),
+    SetWarnThreshold(u8),
+    SetCritThreshold(u8),
+    SetShowMetric(Metric, bool),
+    SetGpuIndex(usize),
 }
 
 pub struct App {
@@ -27,6 +43,7 @@ pub struct App {
     pub(crate) popup_id: Option<cosmic::iced::window::Id>,
     pub(crate) system_monitor_bin: Option<&'static str>,
     pub(crate) config: SystrkrConfig,
+    pub(crate) settings_open: bool,
 }
 
 impl cosmic::Application for App {
@@ -62,6 +79,7 @@ impl cosmic::Application for App {
             popup_id: None,
             system_monitor_bin: detect_system_monitor(),
             config,
+            settings_open: false,
         };
         (app, Task::none())
     }
@@ -127,6 +145,47 @@ impl cosmic::Application for App {
                 self.config = new_cfg;
                 self.cpu_cache.clear();
                 self.gpu_cache.clear();
+                Task::none()
+            }
+            Message::ToggleSettings => {
+                self.settings_open = !self.settings_open;
+                Task::none()
+            }
+            Message::SetRefreshMs(ms) => {
+                self.config.refresh_ms = ms;
+                self.persist();
+                Task::none()
+            }
+            Message::SetHistorySeconds(sec) => {
+                self.config.history_seconds = sec;
+                self.persist();
+                Task::none()
+            }
+            Message::SetWarnThreshold(t) => {
+                self.config.warn_threshold = t;
+                self.persist();
+                Task::none()
+            }
+            Message::SetCritThreshold(t) => {
+                self.config.crit_threshold = t;
+                self.persist();
+                Task::none()
+            }
+            Message::SetShowMetric(m, on) => {
+                match m {
+                    Metric::Cpu => self.config.show_cpu = on,
+                    Metric::Gpu => self.config.show_gpu = on,
+                    Metric::Ram => self.config.show_ram = on,
+                    Metric::Net => self.config.show_net = on,
+                    Metric::Disk => self.config.show_disk = on,
+                }
+                self.persist();
+                Task::none()
+            }
+            Message::SetGpuIndex(i) => {
+                self.config.gpu_index = i;
+                self.persist();
+                self.sampler = Sampler::new(&self.config);
                 Task::none()
             }
         }
@@ -220,6 +279,12 @@ impl App {
 
     pub fn gpu_proc_backend_available(&self) -> bool {
         self.sampler.gpu_proc_backend_available()
+    }
+
+    fn persist(&self) {
+        if let Ok(handle) = cosmic_config::Config::new(CONFIG_ID, CONFIG_VERSION) {
+            let _ = self.config.write_entry(&handle);
+        }
     }
 }
 

@@ -1,5 +1,5 @@
 use cosmic::iced::Length;
-use cosmic::widget::{button, column as col, divider, row, text};
+use cosmic::widget::{button, column as col, divider, icon, row, space, text};
 use cosmic::{Application, Element};
 
 use crate::app::{App, Message};
@@ -10,7 +10,16 @@ pub fn view(app: &App) -> Element<'_, Message> {
     let gpu = &app.latest.gpu;
     let gpu_name = app.gpu_name().to_string();
 
-    let body = col::with_children(vec![
+    let header = row::with_children(vec![
+        text("System").size(13).into(),
+        space::horizontal().into(),
+        button::icon(icon::from_name("emblem-system-symbolic"))
+            .on_press(Message::ToggleSettings)
+            .into(),
+    ]);
+
+    let mut sections: Vec<Element<'_, Message>> = vec![
+        header.into(),
         cpu_section(cpu).into(),
         crate::widgets::proc_list::cpu_list(&app.latest.top_cpu_procs),
         divider::horizontal::default().into(),
@@ -19,11 +28,17 @@ pub fn view(app: &App) -> Element<'_, Message> {
             &app.latest.top_gpu_procs,
             app.gpu_proc_backend_available(),
         ),
-        divider::horizontal::default().into(),
-        footer(app.system_monitor_bin).into(),
-    ])
-    .spacing(8)
-    .padding(12);
+    ];
+
+    if app.settings_open {
+        sections.push(divider::horizontal::default().into());
+        sections.push(crate::settings::view(app));
+    }
+
+    sections.push(divider::horizontal::default().into());
+    sections.push(footer(app.system_monitor_bin).into());
+
+    let body = col::with_children(sections).spacing(8).padding(12);
 
     app.core().applet.popup_container(body).into()
 }
