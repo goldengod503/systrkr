@@ -2,12 +2,14 @@
 
 pub mod cpu;
 pub mod gpu;
+pub mod net;
 pub mod procs;
 
 #[derive(Clone, Debug, Default)]
 pub struct Sample {
     pub cpu: CpuSample,
     pub gpu: GpuSample,
+    pub net: net::NetSample,
     pub top_cpu_procs: Vec<crate::sampler::procs::ProcSample>,
     pub top_gpu_procs: Vec<crate::sampler::gpu::procs::GpuProcSample>,
 }
@@ -42,6 +44,7 @@ pub struct Sampler {
     gpu_backend: Box<dyn GpuBackend>,
     proc_sampler: procs::ProcSampler,
     gpu_proc_backend: Option<Box<dyn gpu::procs::GpuProcessBackend>>,
+    net: net::NetSampler,
 }
 
 impl Sampler {
@@ -53,6 +56,7 @@ impl Sampler {
             gpu_backend,
             proc_sampler: procs::ProcSampler::new(),
             gpu_proc_backend,
+            net: net::NetSampler::new(),
         }
     }
 
@@ -68,6 +72,7 @@ impl Sampler {
         Sample {
             cpu: self.cpu.tick(),
             gpu: self.gpu_backend.sample(),
+            net: self.net.tick(),
             top_cpu_procs: self.proc_sampler.top_n(5),
             top_gpu_procs: self
                 .gpu_proc_backend
