@@ -3,7 +3,16 @@ use cosmic::iced::{Color, Point, Rectangle, Size};
 use cosmic::widget::canvas::Program;
 use cosmic::{Renderer, Theme};
 
-/// Renders a filled-area sparkline using values in 0..=100.
+/// How sample values are normalized into the sparkline's vertical range.
+#[derive(Clone, Copy)]
+pub enum Scale {
+    /// 0..=100 (percentages).
+    Percent,
+    /// Auto-scales to the largest value in the visible window.
+    AutoMax,
+}
+
+/// Renders a filled-area sparkline.
 ///
 /// Values are rendered chronologically left → right; the most recent value is on the right edge.
 /// `tint` is `None` to fall back to the theme accent.
@@ -12,6 +21,7 @@ pub struct Sparkline<'a> {
     capacity: usize,
     cache: &'a Cache,
     tint: Option<Color>,
+    scale: Scale,
 }
 
 impl<'a> Sparkline<'a> {
@@ -21,11 +31,17 @@ impl<'a> Sparkline<'a> {
             capacity,
             cache,
             tint: None,
+            scale: Scale::Percent,
         }
     }
 
     pub fn tint(mut self, color: Color) -> Self {
         self.tint = Some(color);
+        self
+    }
+
+    pub fn scale(mut self, scale: Scale) -> Self {
+        self.scale = scale;
         self
     }
 }
@@ -48,6 +64,7 @@ impl<'a, Message> Program<Message, Theme, Renderer> for Sparkline<'a> {
                 &self.samples,
                 self.capacity,
                 self.tint,
+                self.scale,
                 theme,
             );
         });
@@ -61,6 +78,7 @@ fn draw_sparkline(
     samples: &[f32],
     capacity: usize,
     tint: Option<Color>,
+    scale: Scale,
     theme: &Theme,
 ) {
     if samples.is_empty() || size.width <= 0.0 || size.height <= 0.0 {
@@ -87,10 +105,16 @@ fn draw_sparkline(
     // Right-align the samples: the latest is on the right edge.
     let offset = (capacity - n) as f32;
 
+    // 1.0 floor on AutoMax prevents division-by-zero when all samples are zero.
+    let max = match scale {
+        Scale::Percent => 100.0,
+        Scale::AutoMax => samples.iter().cloned().fold(1.0f32, f32::max),
+    };
+
     let to_point = |i: usize, v: f32| -> Point {
         let x = ((i as f32 + offset) / denom) * size.width;
-        let clamped = v.clamp(0.0, 100.0);
-        let y = size.height - (clamped / 100.0 * size.height);
+        let normalized = v.max(0.0).min(max) / max;
+        let y = size.height - normalized * size.height;
         Point::new(x, y)
     };
 
@@ -120,4 +144,21 @@ fn draw_sparkline(
         &stroke_path,
         Stroke::default().with_color(stroke_color).with_width(1.5),
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sparkline_accepts_auto_max_scale() {
+        let cache = Cache::default();
+        let _sparkline = Sparkline::new(vec![1.0, 2.0, 3.0], 60, &cache).scale(Scale::AutoMax);
+    }
+
+    #[test]
+    fn sparkline_defaults_to_percent_scale() {
+        let cache = Cache::default();
+        let _sparkline = Sparkline::new(vec![10.0, 50.0, 100.0], 60, &cache);
+    }
 }
