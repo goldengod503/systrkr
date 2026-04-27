@@ -63,7 +63,7 @@ impl cosmic::Application for App {
     type Flags = ();
     type Message = Message;
 
-    const APP_ID: &'static str = "com.system76.SysTrkr";
+    const APP_ID: &'static str = "com.goldengod503.GalaxySysTrkr";
 
     fn core(&self) -> &Core {
         &self.core
@@ -404,7 +404,7 @@ impl cosmic::Application for App {
         let button = mouse_area(container(content).padding(4))
             .on_press(Message::TogglePopup);
 
-        autosize::autosize(button, Id::new("systrkr-applet")).into()
+        autosize::autosize(button, Id::new("galaxy-systrkr-applet")).into()
     }
 
     fn subscription(&self) -> Subscription<Message> {

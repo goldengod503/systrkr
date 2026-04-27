@@ -1,9 +1,9 @@
 [Desktop Entry]
 Type=Application
-Name=systrkr
+Name=galaxy-systrkr
 Comment=Lightweight CPU + GPU panel applet
-Exec=systrkr
-Icon=com.system76.SysTrkr
+Exec=galaxy-systrkr
+Icon=com.goldengod503.GalaxySysTrkr
 Terminal=false
 Categories=System;Monitor;
 NoDisplay=true

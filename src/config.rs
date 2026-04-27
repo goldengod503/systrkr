@@ -1,6 +1,6 @@
 use cosmic::cosmic_config::{self, cosmic_config_derive::CosmicConfigEntry, CosmicConfigEntry};
 
-pub const CONFIG_ID: &str = "com.system76.SysTrkr";
+pub const CONFIG_ID: &str = "com.goldengod503.GalaxySysTrkr";
 pub const CONFIG_VERSION: u64 = 2;
 
 #[derive(Clone, Debug, PartialEq, CosmicConfigEntry)]

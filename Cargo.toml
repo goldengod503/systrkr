@@ -1,10 +1,10 @@
 [package]
-name = "systrkr"
+name = "galaxy-systrkr"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
 description = "Lightweight native COSMIC system stats applet"
-repository = "https://github.com/goldengod503/systrkr"
+repository = "https://github.com/goldengod503/galaxy-systrkr"
 
 [features]
 default = ["nvidia"]

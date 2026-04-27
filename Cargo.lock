@@ -1786,6 +1786,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "galaxy-systrkr"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "libcosmic",
+ "nvml-wrapper",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sysinfo",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "wiremock",
+]
+
+[[package]]
 name = "generic-array"
 version = "0.14.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5021,24 +5039,6 @@ dependencies = [
  "ntapi",
  "rayon",
  "windows 0.57.0",
-]
-
-[[package]]
-name = "systrkr"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "libcosmic",
- "nvml-wrapper",
- "reqwest",
- "serde",
- "serde_json",
- "sysinfo",
- "tempfile",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "wiremock",
 ]
 
 [[package]]
