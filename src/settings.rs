@@ -1,5 +1,5 @@
 use cosmic::iced::Length;
-use cosmic::widget::{column as col, dropdown, row, slider, text, toggler};
+use cosmic::widget::{column as col, dropdown, row, slider, text, text_input, toggler};
 use cosmic::Element;
 
 use crate::app::{App, Message, Metric};
@@ -54,7 +54,7 @@ pub fn view(app: &App) -> Element<'_, Message> {
         Message::SetCritThreshold(v as u8)
     });
 
-    col::with_children(vec![
+    let mut children: Vec<Element<'_, Message>> = vec![
         text("Settings").size(13).into(),
         labeled("Refresh", refresh_picker.into()),
         labeled("History", history_picker.into()),
@@ -66,9 +66,17 @@ pub fn view(app: &App) -> Element<'_, Message> {
         metric_row("Show RAM", Metric::Ram, cfg.show_ram),
         metric_row("Show Network", Metric::Net, cfg.show_net),
         metric_row("Show Disk", Metric::Disk, cfg.show_disk),
-    ])
-    .spacing(6)
-    .into()
+        metric_row("Show Ollama", Metric::Ollama, cfg.show_ollama),
+    ];
+
+    if cfg.show_ollama {
+        let host_input = text_input("http://localhost:11434", &cfg.ollama_host)
+            .on_input(Message::SetOllamaHost)
+            .width(Length::Fill);
+        children.push(labeled("Host", host_input.into()));
+    }
+
+    col::with_children(children).spacing(6).into()
 }
 
 fn labeled<'a>(label: impl Into<String>, control: Element<'a, Message>) -> Element<'a, Message> {

@@ -15,6 +15,7 @@ pub enum Metric {
     Ram,
     Net,
     Disk,
+    Ollama,
 }
 
 #[derive(Clone, Debug)]
@@ -31,6 +32,7 @@ pub enum Message {
     SetCritThreshold(u8),
     SetShowMetric(Metric, bool),
     SetGpuIndex(usize),
+    SetOllamaHost(String),
     OllamaTick,
     OllamaProbed(ollama::OllamaSnapshot),
 }
@@ -224,6 +226,7 @@ impl cosmic::Application for App {
                     Metric::Ram => self.config.show_ram = on,
                     Metric::Net => self.config.show_net = on,
                     Metric::Disk => self.config.show_disk = on,
+                    Metric::Ollama => self.config.show_ollama = on,
                 }
                 self.persist();
                 Task::none()
@@ -232,6 +235,11 @@ impl cosmic::Application for App {
                 self.config.gpu_index = i;
                 self.persist();
                 self.sampler = Sampler::new(&self.config);
+                Task::none()
+            }
+            Message::SetOllamaHost(host) => {
+                self.config.ollama_host = host;
+                self.persist();
                 Task::none()
             }
             Message::OllamaTick => {
