@@ -2,7 +2,7 @@
 
 Lightweight native [COSMIC](https://system76.com/cosmic) panel applet that shows live CPU and GPU usage as filled-area sparklines, plus a popup with system details.
 
-![galaxy-systrkr popup with CPU and GPU details](assets/galaxy-trkr-screenshot.png)
+<img src="assets/galaxy-trkr-screenshot.png" alt="galaxy-systrkr popup with CPU and GPU details" width="511">
 
 ## Features
 
