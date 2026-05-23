@@ -184,6 +184,9 @@ impl cosmic::Application for App {
                     self.ollama_prober = ollama::OllamaProber::new(new_cfg.ollama_host.clone());
                     self.ollama_snapshot = ollama::OllamaSnapshot::default();
                 }
+                if new_cfg.gpu_index != self.config.gpu_index {
+                    self.sampler = Sampler::new(&new_cfg);
+                }
                 let cap = new_cfg.history_capacity();
                 if cap != self.cpu_history.capacity() {
                     self.cpu_history.resize(cap);
