@@ -1,5 +1,3 @@
-#![cfg(feature = "nvidia")]
-
 use nvml_wrapper::Nvml as NvmlLib;
 use tracing::warn;
 

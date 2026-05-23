@@ -36,9 +36,7 @@ impl IntelSysfs {
         if !is_intel(&device) {
             return None;
         }
-        if find_render_engine(card).is_none() {
-            return None;
-        }
+        find_render_engine(card)?;
         let name = read_intel_name(&device);
         let pdev = fs::read_link(&device)
             .ok()

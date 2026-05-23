@@ -75,23 +75,23 @@ pub fn enumerate() -> Vec<GpuInfo> {
 
     #[cfg(feature = "nvidia")]
     {
-        if let Ok(lib) = nvml_wrapper::Nvml::init() {
-            if let Ok(count) = lib.device_count() {
-                for i in 0..count {
-                    if let Ok(d) = lib.device_by_index(i) {
-                        let name = d.name().unwrap_or_else(|_| format!("NVIDIA GPU {i}"));
-                        let pdev = d
-                            .pci_info()
-                            .ok()
-                            .map(|p| p.bus_id.to_lowercase())
-                            .unwrap_or_default();
-                        out.push(GpuInfo {
-                            index: out.len(),
-                            name: format!("NVIDIA {name}"),
-                            pdev,
-                            is_nvidia: true,
-                        });
-                    }
+        if let Ok(lib) = nvml_wrapper::Nvml::init()
+            && let Ok(count) = lib.device_count()
+        {
+            for i in 0..count {
+                if let Ok(d) = lib.device_by_index(i) {
+                    let name = d.name().unwrap_or_else(|_| format!("NVIDIA GPU {i}"));
+                    let pdev = d
+                        .pci_info()
+                        .ok()
+                        .map(|p| p.bus_id.to_lowercase())
+                        .unwrap_or_default();
+                    out.push(GpuInfo {
+                        index: out.len(),
+                        name: format!("NVIDIA {name}"),
+                        pdev,
+                        is_nvidia: true,
+                    });
                 }
             }
         }

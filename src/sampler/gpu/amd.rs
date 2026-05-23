@@ -107,10 +107,10 @@ fn read_amdgpu_temp(device: &Path) -> Option<f32> {
     let entries = fs::read_dir(&hwmon_root).ok()?;
     for entry in entries.flatten() {
         let candidate = entry.path().join("temp1_input");
-        if let Some(raw) = read_trim(&candidate) {
-            if let Ok(milli) = raw.parse::<i32>() {
-                return Some(milli as f32 / 1000.0);
-            }
+        if let Some(raw) = read_trim(&candidate)
+            && let Ok(milli) = raw.parse::<i32>()
+        {
+            return Some(milli as f32 / 1000.0);
         }
     }
     None

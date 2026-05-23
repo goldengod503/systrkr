@@ -20,10 +20,10 @@ pub fn view(app: &App) -> Element<'_, Message> {
 
     let mut sections: Vec<Element<'_, Message>> = vec![
         header.into(),
-        cpu_section(cpu).into(),
+        cpu_section(cpu),
         crate::widgets::proc_list::cpu_list(&app.latest.top_cpu_procs),
         divider::horizontal::default().into(),
-        gpu_section(&gpu_name, gpu).into(),
+        gpu_section(&gpu_name, gpu),
         crate::widgets::proc_list::gpu_list(
             &app.latest.top_gpu_procs,
             app.gpu_proc_backend_available(),
@@ -41,7 +41,7 @@ pub fn view(app: &App) -> Element<'_, Message> {
     }
 
     sections.push(divider::horizontal::default().into());
-    sections.push(footer(app.system_monitor_bin).into());
+    sections.push(footer(app.system_monitor_bin));
 
     let body = col::with_children(sections).spacing(8).padding(12);
 

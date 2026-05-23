@@ -120,10 +120,9 @@ impl cosmic::Application for App {
                 }
                 if let (Some(used), Some(total)) =
                     (sample.cpu.ram_used_bytes, sample.cpu.ram_total_bytes)
+                    && total > 0
                 {
-                    if total > 0 {
-                        self.ram_history.push((used as f32 / total as f32) * 100.0);
-                    }
+                    self.ram_history.push((used as f32 / total as f32) * 100.0);
                 }
                 let net_combined = sample.net.rx_bps.saturating_add(sample.net.tx_bps);
                 self.net_history.push(net_combined as f32);
@@ -147,7 +146,7 @@ impl cosmic::Application for App {
                     ));
                 }
 
-                return cosmic::task::message(cosmic::Action::Cosmic(
+                cosmic::task::message(cosmic::Action::Cosmic(
                     cosmic::app::Action::Surface(app_popup::<App>(
                         |state: &mut App| {
                             let new_id = Id::unique();
@@ -169,7 +168,7 @@ impl cosmic::Application for App {
                             crate::popup::view(state).map(cosmic::Action::App)
                         })),
                     )),
-                ));
+                ))
             }
             Message::PopupClosed => {
                 self.popup_id = None;
@@ -468,12 +467,7 @@ impl App {
 
 fn detect_system_monitor() -> Option<&'static str> {
     let candidates = ["cosmic-monitor", "gnome-system-monitor"];
-    for bin in candidates {
-        if which(bin) {
-            return Some(bin);
-        }
-    }
-    None
+    candidates.into_iter().find(|bin| which(bin))
 }
 
 fn which(bin: &str) -> bool {
