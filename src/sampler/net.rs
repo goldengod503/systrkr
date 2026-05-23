@@ -26,7 +26,7 @@ impl NetSampler {
         let now = Instant::now();
         let (mut rx, mut tx) = (0u64, 0u64);
         for (name, n) in self.networks.iter() {
-            if name == "lo" || name.starts_with("docker") || name.starts_with("br-") {
+            if is_virtual_iface(name) {
                 continue;
             }
             rx = rx.saturating_add(n.total_received());
@@ -49,6 +49,23 @@ impl Default for NetSampler {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Excludes loopback and the common virtual-interface families (container
+/// bridges, libvirt, VPN/tunnel, WireGuard, CNI). The NET sparkline aims
+/// to reflect physical network traffic; container/tunnel pairs duplicate
+/// the underlying packets and inflate the reading.
+fn is_virtual_iface(name: &str) -> bool {
+    name == "lo"
+        || name.starts_with("docker")
+        || name.starts_with("br-")
+        || name.starts_with("veth")
+        || name.starts_with("virbr")
+        || name.starts_with("tun")
+        || name.starts_with("tap")
+        || name.starts_with("podman")
+        || name.starts_with("wg")
+        || name.starts_with("cni")
 }
 
 #[cfg(test)]

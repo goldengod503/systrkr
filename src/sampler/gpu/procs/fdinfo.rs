@@ -17,6 +17,9 @@ pub struct FdinfoProcs {
 
 impl FdinfoProcs {
     pub fn new(pdev: String) -> Option<Self> {
+        if pdev.is_empty() {
+            return None;
+        }
         Some(Self {
             target_pdev: pdev,
             last: HashMap::new(),

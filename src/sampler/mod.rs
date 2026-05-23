@@ -53,7 +53,11 @@ pub struct Sampler {
 impl Sampler {
     pub fn new(cfg: &crate::config::SystrkrConfig) -> Self {
         let gpu_backend = gpu::probe_index(cfg.gpu_index);
-        let gpu_proc_backend = gpu::procs::probe(gpu_backend.pdev(), gpu_backend.is_nvidia());
+        let gpu_proc_backend = gpu::procs::probe(
+            gpu_backend.pdev(),
+            gpu_backend.is_nvidia(),
+            gpu_backend.nvml_index(),
+        );
         Self {
             cpu: CpuSampler::new(),
             gpu_backend,

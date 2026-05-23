@@ -23,16 +23,23 @@ pub trait GpuProcessBackend: Send {
 }
 
 /// Picks the right backend for the given GPU pdev (PCI address like
-/// "0000:2b:00.0"). NVIDIA pdevs go to NVML; everything else to fdinfo.
-/// Returns None if neither backend can serve the pdev.
-pub fn probe(pdev: &str, is_nvidia: bool) -> Option<Box<dyn GpuProcessBackend>> {
+/// "0000:2b:00.0"). NVIDIA pdevs go to NVML and need the device index;
+/// everything else to fdinfo. Returns None if neither backend can serve
+/// the pdev — e.g., when the selected GPU is `NoGpu` (empty pdev).
+pub fn probe(
+    pdev: &str,
+    is_nvidia: bool,
+    nvml_index: Option<u32>,
+) -> Option<Box<dyn GpuProcessBackend>> {
     #[cfg(feature = "nvidia")]
     if is_nvidia {
-        if let Some(b) = nvml::NvmlProcs::new() {
-            return Some(Box::new(b));
+        if let Some(idx) = nvml_index {
+            if let Some(b) = nvml::NvmlProcs::new(idx) {
+                return Some(Box::new(b));
+            }
         }
     }
-    let _ = is_nvidia; // silence warning when nvidia feature is off
+    let _ = (is_nvidia, nvml_index); // silence warning when nvidia feature is off
     if let Some(b) = fdinfo::FdinfoProcs::new(pdev.to_string()) {
         return Some(Box::new(b));
     }

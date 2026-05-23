@@ -59,9 +59,16 @@ impl GpuBackend for Nvml {
         true
     }
 
+    fn nvml_index(&self) -> Option<u32> {
+        Some(self.index)
+    }
+
     fn sample(&mut self) -> GpuSample {
         let device = match self.lib.device_by_index(self.index) {
-            Ok(d) => d,
+            Ok(d) => {
+                self.sample_warned = false;
+                d
+            }
             Err(e) => {
                 if !self.sample_warned {
                     warn!(error = %e, index = self.index, "NVML device_by_index failed");

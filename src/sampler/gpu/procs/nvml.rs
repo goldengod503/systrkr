@@ -7,12 +7,13 @@ use super::{GpuProcSample, GpuProcessBackend};
 
 pub struct NvmlProcs {
     lib: NvmlLib,
+    index: u32,
 }
 
 impl NvmlProcs {
-    pub fn new() -> Option<Self> {
+    pub fn new(index: u32) -> Option<Self> {
         match NvmlLib::init() {
-            Ok(lib) => Some(Self { lib }),
+            Ok(lib) => Some(Self { lib, index }),
             Err(e) => {
                 warn!(error = %e, "NVML init for per-process failed");
                 None
@@ -23,7 +24,7 @@ impl NvmlProcs {
 
 impl GpuProcessBackend for NvmlProcs {
     fn top_n(&mut self, n: usize) -> Vec<GpuProcSample> {
-        let device = match self.lib.device_by_index(0) {
+        let device = match self.lib.device_by_index(self.index) {
             Ok(d) => d,
             Err(_) => return Vec::new(),
         };

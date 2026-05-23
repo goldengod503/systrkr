@@ -22,6 +22,12 @@ pub trait GpuBackend: Send {
 
     /// True if this is the NVIDIA backend (driver doesn't populate fdinfo).
     fn is_nvidia(&self) -> bool;
+
+    /// NVML device index for NVIDIA backends so per-process readers can
+    /// target the same card. `None` for every non-NVIDIA backend.
+    fn nvml_index(&self) -> Option<u32> {
+        None
+    }
 }
 
 /// Select GPU backend for the given index using `enumerate()` to identify the card.
