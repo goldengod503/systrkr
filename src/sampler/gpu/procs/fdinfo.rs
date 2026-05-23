@@ -28,6 +28,7 @@ impl FdinfoProcs {
 
 impl GpuProcessBackend for FdinfoProcs {
     fn top_n(&mut self, n: usize) -> Vec<GpuProcSample> {
+        let started = Instant::now();
         let scan = scan_proc_fdinfo(&self.target_pdev);
         let now = Instant::now();
         let mut samples: Vec<GpuProcSample> = scan
@@ -71,6 +72,15 @@ impl GpuProcessBackend for FdinfoProcs {
         self.last.retain(|pid, _| live.contains(pid));
 
         samples.truncate(n);
+
+        // Feeds the ARCHITECTURE.md reopen trigger for "Synchronous sampling
+        // on the UI thread" — promote to async if this ever crosses 10 ms.
+        tracing::debug!(
+            elapsed_us = started.elapsed().as_micros() as u64,
+            scanned = live.len(),
+            "FdinfoProcs::top_n",
+        );
+
         samples
     }
 }

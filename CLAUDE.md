@@ -4,7 +4,7 @@ Project-specific context for Claude Code sessions in this repo. The
 PC-global and homelab-shared CLAUDE.md files load on top of this one
 (see `~/.claude/CLAUDE.md`).
 
-**Last verified against commit:** 53423ae (2026-05-23)
+**Last verified against commit:** 456bee7 (2026-05-23)
 
 ## What this is
 

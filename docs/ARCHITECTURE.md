@@ -6,7 +6,7 @@ The point of this doc is to give future architectural reviews a
 baseline to compare against — findings that contradict a stated
 decision here must argue against the doc rather than against a vacuum.
 
-**Last verified against commit:** 53423ae (2026-05-23, initial draft from /robot:project-documentation first-run — please review and edit before relying on it)
+**Last verified against commit:** 456bee7 (2026-05-23, sampler architectural-analysis follow-through: ConfigUpdated reinit, fdinfo GC fix, NVML correctness bundle, sampler/gpu tidy)
 
 ## Current structure
 
@@ -148,6 +148,25 @@ backpressure, and would also force `Sample` to be `Send + 'static`. The
 current cost is measured, not assumed; reopen if any backend ever
 needs more than 10 ms (see Known-deferred issues).
 
+The `Send` supertrait on `GpuBackend` (`src/sampler/gpu/mod.rs:15`) and
+`GpuProcessBackend` (`src/sampler/gpu/procs/mod.rs:20`) is **forward
+compatibility pre-positioning** for the day this decision is revisited
+— not a contradiction of the single-threaded execution model. Every
+concrete backend is naturally `Send` today; removing the bound saves
+nothing and would have to be re-added the moment threading is
+reconsidered.
+
+### Two `NvmlLib::init()` handles — one for stats, one for procs — is deliberate
+
+`src/sampler/gpu/nvml.rs:23` and `src/sampler/gpu/procs/nvml.rs:14`
+each call `NvmlLib::init()` independently inside `Sampler::new()`.
+`nvml_wrapper` ref-counts the underlying `nvmlInit_v2`/`nvmlShutdown`
+calls, so the dual init is safe. **Rationale:** sharing a single
+`Arc<NvmlLib>` would require either threading the handle through
+`gpu::procs::probe(...)` or a module-level `OnceLock`, both of which
+are larger than the duplication they replace. The two-handle pattern
+is documented here so a future contributor doesn't try to "fix" it.
+
 ### Top-N hardcoded to 5 for both CPU and GPU process lists
 
 `src/sampler/mod.rs:81-86`. **Rationale:** popup vertical space is the
@@ -161,7 +180,13 @@ slider for marginal value; the YAGNI line is drawn here.
 `Sampler::tick()` blocks the cosmic applet's update loop. Today's
 backends are fast; if a future backend (e.g., a Vulkan-based GPU
 counter) needs >10 ms per sample the applet will visibly jank at
-500 ms tick.
+500 ms tick. `FdinfoProcs::top_n` is the heaviest path today — it
+walks every numeric `/proc/{pid}/fd/` directory per tick — and emits
+its elapsed time via `tracing::debug!(target = "galaxy_systrkr",
+"FdinfoProcs::top_n", elapsed_us, scanned)` so the reopen trigger
+below has a real signal source instead of being purely aspirational
+(`src/sampler/gpu/procs/fdinfo.rs:30-83`). Run the applet with
+`RUST_LOG=galaxy_systrkr=debug` to surface the numbers.
 
 **Reopen when:** any sampler ever logs a `tick()` duration over 10 ms,
 or a new backend lands that is expected to be slow.
@@ -207,6 +232,16 @@ becomes a goal.
 
 ## Recent architectural changes
 
+- **2026-05-23** — `robot:architectural-analysis` on `src/sampler/`
+  followed by a five-commit landing: `ef351c9` (ConfigUpdated reinits
+  Sampler when gpu_index changes), `8c76727` (FdinfoProcs GC against
+  full scan set, not top-N), `ad524b0` (GPU-process correctness:
+  empty-pdev guard, NVML index plumbed through, sample_warned reset,
+  NET filter extension), `456bee7` (sampler/gpu tidy: extract
+  `is_card_dir` / `resolve_card_by_pdev` / `read_proc_name` helpers,
+  drop dead `probe()` fns, fix `as_nanos() as u64` cast, fix
+  no-default-features build), plus this doc refresh and the
+  `tracing::debug!` instrumentation in `FdinfoProcs::top_n`.
 - **2026-05-16** — `fix(popup): add 14px gap between popup and panel bar`
   (80b482a). Popup positioner offset bumped by ±14 px in
   `app.rs:162-166`.
