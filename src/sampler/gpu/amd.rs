@@ -10,10 +10,6 @@ pub struct AmdSysfs {
 }
 
 impl AmdSysfs {
-    pub fn probe() -> Option<Self> {
-        Self::probe_in(Path::new("/sys/class/drm"))
-    }
-
     pub fn probe_in(drm_root: &Path) -> Option<Self> {
         for card in iter_cards(drm_root)? {
             if let Some(backend) = Self::probe_specific(&card) {
@@ -44,27 +40,7 @@ impl AmdSysfs {
     }
 
     pub fn probe_pdev(pdev: &str) -> Option<Self> {
-        let drm_root = std::path::Path::new("/sys/class/drm");
-        let entries = std::fs::read_dir(drm_root).ok()?;
-        for entry in entries.flatten() {
-            let card = entry.path();
-            let card_name = card
-                .file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or_default();
-            if !(card_name.starts_with("card") && !card_name.contains('-')) {
-                continue;
-            }
-            let device = card.join("device");
-            let card_pdev = std::fs::read_link(&device)
-                .ok()
-                .and_then(|p| p.file_name().and_then(|n| n.to_str().map(|s| s.to_string())))
-                .unwrap_or_default();
-            if card_pdev == pdev {
-                return Self::probe_specific(&card);
-            }
-        }
-        None
+        super::resolve_card_by_pdev(pdev).and_then(|card| Self::probe_specific(&card))
     }
 
     fn device(&self) -> PathBuf {
@@ -104,7 +80,7 @@ fn iter_cards(drm_root: &Path) -> Option<impl Iterator<Item = PathBuf>> {
     Some(entries.filter_map(|e| e.ok().map(|e| e.path())).filter(|p| {
         p.file_name()
             .and_then(|n| n.to_str())
-            .map(|n| n.starts_with("card") && !n.contains('-'))
+            .map(super::is_card_dir)
             .unwrap_or(false)
     }))
 }

@@ -3,7 +3,7 @@
 use nvml_wrapper::Nvml as NvmlLib;
 use tracing::warn;
 
-use super::{GpuProcSample, GpuProcessBackend};
+use super::{read_proc_name, GpuProcSample, GpuProcessBackend};
 
 pub struct NvmlProcs {
     lib: NvmlLib,
@@ -67,10 +67,4 @@ fn push_proc(list: &mut Vec<GpuProcSample>, pid: u32, mem: u64) {
         memory_bytes: Some(mem),
         utilization_pct: None,
     });
-}
-
-fn read_proc_name(pid: u32) -> Option<String> {
-    std::fs::read_to_string(format!("/proc/{pid}/comm"))
-        .ok()
-        .map(|s| s.trim().to_string())
 }

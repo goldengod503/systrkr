@@ -15,10 +15,6 @@ pub struct Nvml {
 }
 
 impl Nvml {
-    pub fn probe() -> Option<Self> {
-        Self::probe_index(0)
-    }
-
     pub fn probe_index(idx: u32) -> Option<Self> {
         let lib = match NvmlLib::init() {
             Ok(l) => l,

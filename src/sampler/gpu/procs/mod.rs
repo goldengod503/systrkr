@@ -45,3 +45,12 @@ pub fn probe(
     }
     None
 }
+
+/// Read `/proc/{pid}/comm` and trim. Returns `None` if the pid is gone
+/// or `comm` is unreadable. Shared between the fdinfo and NVML procs
+/// backends.
+pub(crate) fn read_proc_name(pid: u32) -> Option<String> {
+    std::fs::read_to_string(format!("/proc/{pid}/comm"))
+        .ok()
+        .map(|s| s.trim().to_string())
+}

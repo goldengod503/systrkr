@@ -4,10 +4,9 @@
 
 use std::collections::HashMap;
 use std::fs;
-use std::path::PathBuf;
 use std::time::Instant;
 
-use super::{GpuProcSample, GpuProcessBackend};
+use super::{read_proc_name, GpuProcSample, GpuProcessBackend};
 
 pub struct FdinfoProcs {
     target_pdev: String,
@@ -36,7 +35,10 @@ impl GpuProcessBackend for FdinfoProcs {
             .map(|agg| {
                 let pct = match self.last.insert(agg.pid, (now, agg.busy_ns)) {
                     Some((prev_t, prev_busy)) => {
-                        let dt_ns = now.saturating_duration_since(prev_t).as_nanos() as u64;
+                        let dt_ns = u64::try_from(
+                            now.saturating_duration_since(prev_t).as_nanos(),
+                        )
+                        .unwrap_or(u64::MAX);
                         if dt_ns == 0 {
                             None
                         } else {
@@ -184,15 +186,10 @@ fn parse_kib(value: &str) -> Option<u64> {
     kib.trim().parse::<u64>().ok().map(|k| k * 1024)
 }
 
-fn read_proc_name(pid: u32) -> Option<String> {
-    fs::read_to_string(format!("/proc/{pid}/comm"))
-        .ok()
-        .map(|s| s.trim().to_string())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
 
     fn fixture_path(name: &str) -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))

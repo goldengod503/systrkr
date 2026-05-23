@@ -1,4 +1,4 @@
-//! GPU sampling abstraction. Backends are picked at startup by `probe()`.
+//! GPU sampling abstraction. Backends are picked at startup by `probe_index()`.
 
 pub mod none;
 pub mod amd;
@@ -7,6 +7,8 @@ pub mod procs;
 
 #[cfg(feature = "nvidia")]
 pub mod nvml;
+
+use std::path::PathBuf;
 
 use super::GpuSample;
 
@@ -60,11 +62,6 @@ pub fn probe_index(index: usize) -> Box<dyn GpuBackend> {
     Box::new(none::NoGpu::new())
 }
 
-/// Auto-detect the first available GPU. Equivalent to `probe_index(0)`.
-pub fn probe() -> Box<dyn GpuBackend> {
-    probe_index(0)
-}
-
 #[derive(Debug, Clone)]
 pub struct GpuInfo {
     pub index: usize,
@@ -108,7 +105,7 @@ pub fn enumerate() -> Vec<GpuInfo> {
                 .and_then(|n| n.to_str())
                 .unwrap_or_default()
                 .to_string();
-            if !(card_name.starts_with("card") && !card_name.contains('-')) {
+            if !is_card_dir(&card_name) {
                 continue;
             }
             let device = path.join("device");
@@ -116,7 +113,7 @@ pub fn enumerate() -> Vec<GpuInfo> {
                 .ok()
                 .and_then(|p| p.file_name().and_then(|n| n.to_str().map(|s| s.to_string())))
                 .unwrap_or_default();
-            if out.iter().any(|g| g.pdev == pdev) {
+            if out.iter().any(|g: &GpuInfo| g.pdev == pdev) {
                 continue;
             }
             let uevent = std::fs::read_to_string(device.join("uevent")).unwrap_or_default();
@@ -135,4 +132,39 @@ pub fn enumerate() -> Vec<GpuInfo> {
     }
 
     out
+}
+
+/// True for `/sys/class/drm/cardN` directories. Excludes the connector
+/// subdirectories like `card0-DP-1` which contain a hyphen.
+pub(crate) fn is_card_dir(name: &str) -> bool {
+    name.starts_with("card") && !name.contains('-')
+}
+
+/// Find the `/sys/class/drm/cardN` directory whose `device` symlink
+/// resolves to `pdev`. Returns `None` if no card matches or `pdev` is
+/// empty (the `NoGpu` sentinel).
+pub(crate) fn resolve_card_by_pdev(pdev: &str) -> Option<PathBuf> {
+    if pdev.is_empty() {
+        return None;
+    }
+    let entries = std::fs::read_dir("/sys/class/drm").ok()?;
+    for entry in entries.flatten() {
+        let card = entry.path();
+        let name = card
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or_default();
+        if !is_card_dir(name) {
+            continue;
+        }
+        let device = card.join("device");
+        let card_pdev = std::fs::read_link(&device)
+            .ok()
+            .and_then(|p| p.file_name().and_then(|n| n.to_str().map(|s| s.to_string())))
+            .unwrap_or_default();
+        if card_pdev == pdev {
+            return Some(card);
+        }
+    }
+    None
 }
