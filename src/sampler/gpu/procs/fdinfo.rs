@@ -57,12 +57,15 @@ impl GpuProcessBackend for FdinfoProcs {
             let bv = b.utilization_pct.unwrap_or(0.0);
             bv.partial_cmp(&av).unwrap_or(std::cmp::Ordering::Equal)
         });
-        samples.truncate(n);
 
-        // Garbage-collect the last-sample map so it doesn't grow without bound.
+        // Garbage-collect against the full scan set (before truncation), not
+        // the top-N. Otherwise a process that drops below rank N for one tick
+        // loses its delta baseline and emits `None` utilization on re-entry —
+        // which sorts it to the bottom and re-evicts it. Self-reinforcing.
         let live: std::collections::HashSet<u32> = samples.iter().map(|s| s.pid).collect();
         self.last.retain(|pid, _| live.contains(pid));
 
+        samples.truncate(n);
         samples
     }
 }
